@@ -14,28 +14,28 @@ jobs:
       - name: Node.js installieren
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
 
       - name: Abhängigkeiten installieren
         run: npm install
 
-      - name: Android-Projekt vorbereiten
+      - name: Android-Projekt erstellen
         run: npx cap add android
 
       - name: Capacitor synchronisieren
         run: npx cap sync android
 
       - name: Java installieren
-  uses: actions/setup-java@v4
-  with:
-    distribution: temurin
-    java-version: '21'
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
 
       - name: APK bauen
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
 
-      - name: APK bereitstellen
+      - name: APK speichern
         uses: actions/upload-artifact@v4
         with:
           name: Zombie-Rush-3D
