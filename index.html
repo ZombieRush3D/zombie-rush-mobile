@@ -1752,6 +1752,233 @@ draw();
 requestAnimationFrame(loop);  
 }  
   
-requestAnimationFrame(loop);  
+requestAnimationFrame(loop); const SERVER_URL = "DEINE-SERVER-ADRESSE";
+
+let authToken = null;
+let loggedInUsername = null;
+
+async function registerUser() {
+  const username =
+    document.getElementById("loginName").value.trim();
+
+  const password =
+    document.getElementById("loginPassword").value;
+
+  const message =
+    document.getElementById("loginMessage");
+
+  if (!username || !password) {
+    message.textContent =
+      "Bitte Name und Passwort eingeben.";
+
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      SERVER_URL + "/api/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Registrierung fehlgeschlagen.";
+
+      return;
+    }
+
+    authToken = data.token;
+    loggedInUsername = data.username;
+
+    loginSuccess();
+
+  } catch (error) {
+
+    message.textContent =
+      "Server nicht erreichbar.";
+  }
+}
+
+async function loginUser() {
+  const username =
+    document.getElementById("loginName").value.trim();
+
+  const password =
+    document.getElementById("loginPassword").value;
+
+  const message =
+    document.getElementById("loginMessage");
+
+  if (!username || !password) {
+    message.textContent =
+      "Bitte Name und Passwort eingeben.";
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      SERVER_URL + "/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Login fehlgeschlagen.";
+
+      return;
+    }
+
+    authToken = data.token;
+    loggedInUsername = data.username;
+
+    loginSuccess();
+
+  } catch (error) {
+
+    message.textContent =
+      "Server nicht erreichbar.";
+  }
+}
+
+function loginSuccess() {
+
+  document
+    .getElementById("loginBox")
+    .classList.add("hidden");
+
+  document
+    .getElementById("loggedInBox")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("loggedInName")
+    .textContent = loggedInUsername;
+
+  loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+
+  const element =
+    document.getElementById("leaders");
+
+  try {
+
+    const response =
+      await fetch(
+        SERVER_URL + "/api/leaderboard"
+      );
+
+    const scores =
+      await response.json();
+
+    if (!scores.length) {
+
+      element.innerHTML =
+        '<p class="muted">Noch keine Scores.</p>';
+
+      return;
+    }
+
+    element.innerHTML =
+      scores.map((entry, index) => {
+
+        return `
+          <div class="leader">
+            <b>#${index + 1}</b>
+
+            <span>
+              ${escapeHtml(entry.username)}
+            </span>
+
+            <strong>
+              ${Number(entry.score)
+                .toLocaleString("de-DE")}
+            </strong>
+          </div>
+        `;
+
+      }).join("");
+
+  } catch {
+
+    element.innerHTML =
+      '<p class="muted">Rangliste nicht erreichbar.</p>';
+  }
+}
+
+async function uploadScore() {
+
+  if (!authToken) return;
+
+  try {
+
+    await fetch(
+      SERVER_URL + "/api/scores",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            "Bearer " + authToken
+        },
+
+        body: JSON.stringify({
+          score: game.score,
+          wave: game.wave,
+          level: player.level
+        })
+      }
+    );
+
+    loadLeaderboard();
+
+  } catch (error) {
+
+    console.log(
+      "Score konnte nicht gespeichert werden.",
+      error
+    );
+  }
+}
+
+document
+  .getElementById("loginButton")
+  .addEventListener(
+    "click",
+    loginUser
+  );
+
+document
+  .getElementById("registerButton")
+  .addEventListener(
+    "click",
+    registerUser
+  ); 
 </script>  </body>  
 </html>
