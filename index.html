@@ -83,17 +83,68 @@ input{width:min(300px,100%);padding:13px;margin:14px 0;border:1px solid #ffffff2
 <div id="toastText"></div>  
 </div>  <canvas id="miniMap" width="220" height="220"></canvas>
 
-<section id="start" class="screen">  
-<div class="card">  
-<h1>ZOMBIE<span>RUSH</span></h1>  
-<p class="muted">3D NIGHT SURVIVAL</p>  
-<input id="playerName" maxlength="16" placeholder="Dein Name">  
-<p class="muted">PC: WASD · Maus · Linksklick · R · 1–6</p>  
-<p class="muted">Handy: linker Stick = laufen · rechter Stick = drehen</p>  
-<button id="startButton">SPIEL STARTEN</button>  
-<h2>HIGH SCORE</h2>  
-<div id="leaders"></div>  
-</div>  
+<section id="start" class="screen">
+  <div class="card">
+
+    <h1>ZOMBIE<span>RUSH</span></h1>
+    <p class="muted">3D NIGHT SURVIVAL</p>
+
+    <div id="loginBox">
+
+      <h2>LOGIN</h2>
+
+      <input
+        id="loginName"
+        maxlength="16"
+        placeholder="Spielername"
+        autocomplete="username"
+      >
+
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Passwort"
+        autocomplete="current-password"
+      >
+
+      <br>
+
+      <button id="loginButton">
+        EINLOGGEN
+      </button>
+
+      <button id="registerButton">
+        REGISTRIEREN
+      </button>
+
+      <p id="loginMessage" class="muted"></p>
+
+    </div>
+
+    <div id="loggedInBox" class="hidden">
+
+      <h2>WILLKOMMEN</h2>
+
+      <p>
+        Spieler:
+        <b id="loggedInName"></b>
+      </p>
+
+      <button id="startButton">
+        SPIEL STARTEN
+      </button>
+
+    </div>
+
+    <h2>ONLINE HIGH SCORE</h2>
+
+    <div id="leaders">
+      <p class="muted">
+        Lade Rangliste...
+      </p>
+    </div>
+
+  </div>
 </section>  <section id="shopScreen" class="screen hidden">  
 <div class="card">  
 <h2>ARMORY</h2>  
