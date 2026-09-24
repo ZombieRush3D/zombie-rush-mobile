@@ -1,4 +1,4 @@
-name: Build Zombie Rush 3D
+name: Build Zombie Rush 3D Play Store
 
 on:
   workflow_dispatch:
@@ -31,12 +31,12 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: APK bauen
+      - name: Play-Store AAB bauen
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug
+        run: chmod +x gradlew && ./gradlew bundleDebug
 
-      - name: APK speichern
+      - name: AAB speichern
         uses: actions/upload-artifact@v4
         with:
-          name: Zombie-Rush-3D
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Zombie-Rush-3D-Play-Store
+          path: android/app/build/outputs/bundle/debug/app-debug.aab
