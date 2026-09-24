@@ -1,15 +1,14 @@
 {
-  "name": "zombie-rush-mobile",
+  "name": "zombie-rush-server",
   "version": "1.0.0",
-  "private": true,
+  "description": "Zombie Rush 3D online server",
+  "main": "server.js",
   "scripts": {
-    "build": "npx cap sync"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/android": "^8.0.0"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^8.0.0"
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
   }
 }
