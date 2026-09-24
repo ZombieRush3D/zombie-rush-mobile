@@ -1,47 +1,97 @@
 const express = require("express");
 const cors = require("cors");
+const Database = require("better-sqlite3");
+const crypto = require("crypto");
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
 
-const scores = [];
+const db = new Database("zombie-rush.db");
 
-// Punktzahl speichern
-app.post("/score", (req, res) => {
-    const username = String(req.body.username || "Spieler").slice(0, 20);
-    const score = Number(req.body.score || 0);
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`).run();
 
-    if (!Number.isFinite(score) || score < 0) {
-        return res.status(400).json({ error: "Ungültige Punktzahl" });
-    }
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    score INTEGER NOT NULL,
+    wave INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+  )
+`).run();
 
-    scores.push({
-        username,
-        score,
-        date: new Date().toISOString()
-    });
+const sessions = new Map();
 
-    scores.sort((a, b) => b.score - a.score);
+function hashPassword(password) {
+  return crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
+}
 
-    // Nur die besten 100 behalten
-    scores.splice(100);
+function createToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
 
-    res.json({ success: true });
-});
+function getUserFromRequest(req) {
+  const token = req.headers.authorization?.replace("Bearer ", "");
 
-// Rangliste abrufen
-app.get("/scores", (req, res) => {
-    res.json(scores);
-});
+  if (!token) return null;
+
+  const userId = sessions.get(token);
+
+  if (!userId) return null;
+
+  return db
+    .prepare("SELECT id, username FROM users WHERE id = ?")
+    .get(userId);
+}
 
 app.get("/", (req, res) => {
-    res.send("Zombie Rush 3D Server läuft!");
+  res.json({
+    game: "Zombie Rush 3D",
+    online: true
+  });
 });
 
-const PORT = process.env.PORT || 3000;
+app.post("/api/register", (req, res) => {
+  const username = String(req.body.username || "").trim();
+  const password = String(req.body.password || "");
 
-app.listen(PORT, () => {
-    console.log(`Server läuft auf Port ${PORT}`);
-});
+  if (username.length < 3 || username.length > 16) {
+    return res.status(400).json({
+      error: "Der Name muss 3 bis 16 Zeichen haben."
+    });
+  }
+
+  if (password.length < 6) {
+    return res.status(400).json({
+      error: "Das Passwort muss mindestens 6 Zeichen haben."
+    });
+  }
+
+  const passwordHash = hashPassword(password);
+
+  try {
+    const result = db
+      .prepare(`
+        INSERT INTO users (username, password_hash)
+        VALUES (?, ?)
+      `)
+      .run(username, passwordHash);
+
+    const token = createToken();
+
+    sessions.set(token, result.last
