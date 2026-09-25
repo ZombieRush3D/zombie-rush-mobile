@@ -100,7 +100,8 @@ function publicProfile(userId) {
   }
 }
 
-app.get("/", (_req, res) => res.json({ game: "Zombie Rush 3D", online: true }));
+app.use(express.static("www"));
+app.get("/api/health", (_req, res) => res.json({ game: "Zombie Rush 3D", online: true }));
 
 app.post("/api/register", (req, res) => {
   const username = String(req.body.username || "").trim();
