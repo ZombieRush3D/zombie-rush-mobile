@@ -1355,12 +1355,8 @@ reloadTimer=0;
 updateHud();  
 }  
   
-function startGame(){  
-const inputName=  
-document.getElementById(  
-"playerName"  
-).value.trim();  
-  
+function startGame(){
+const inputName=loggedInUsername || document.getElementById("loginName").value.trim();
 game.playerName=  
 inputName.slice(0,16)||  
 "Player";  
@@ -1384,10 +1380,10 @@ game.running=true;
 startWave();  
 }  
   
-function endGame(){  
-game.running=false;  
-  
-saveScore();  
+function endGame(){
+game.running=false;
+saveScore();
+uploadScore();  
   
 document.getElementById(  
 "finalText"  
@@ -1754,8 +1750,8 @@ requestAnimationFrame(loop);
   
 requestAnimationFrame(loop); const SERVER_URL = window.ZOMBIE_RUSH_API_URL || "";
 
-let authToken = null;
-let loggedInUsername = null;
+let authToken = localStorage.getItem("zombieRushAuthToken");
+let loggedInUsername = localStorage.getItem("zombieRushUsername");
 
 async function registerUser() {
   const username =
@@ -1800,7 +1796,8 @@ async function registerUser() {
 
     authToken = data.token;
     loggedInUsername = data.username;
-
+    localStorage.setItem("zombieRushAuthToken", authToken);
+    localStorage.setItem("zombieRushUsername", loggedInUsername);
     loginSuccess();
 
   } catch (error) {
@@ -1854,7 +1851,8 @@ async function loginUser() {
 
     authToken = data.token;
     loggedInUsername = data.username;
-
+    localStorage.setItem("zombieRushAuthToken", authToken);
+    localStorage.setItem("zombieRushUsername", loggedInUsername);
     loginSuccess();
 
   } catch (error) {
