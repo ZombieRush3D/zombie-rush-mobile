@@ -31,12 +31,22 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Play-Store AAB bauen
+      - name: Android APK und AAB bauen
         working-directory: android
-        run: chmod +x gradlew && ./gradlew bundleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug bundleDebug
+
+      - name: APK speichern
+        uses: actions/upload-artifact@v4
+        with:
+          name: Zombie-Rush-3D-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
       - name: AAB speichern
         uses: actions/upload-artifact@v4
         with:
-          name: Zombie-Rush-3D-Play-Store
+          name: Zombie-Rush-3D-AAB
           path: android/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
