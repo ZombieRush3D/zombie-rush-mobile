@@ -26,7 +26,9 @@ jobs:
         run: npx cap add android
 
       - name: Capacitor synchronisieren
-        run: npx cap sync android
+        env:
+          ZOMBIE_RUSH_API_URL: https://zombie-rush-3d-api.onrender.com
+        run: npm run cap:sync
 
       - name: Java installieren
         uses: actions/setup-java@v4
