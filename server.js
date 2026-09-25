@@ -59,11 +59,17 @@ function hashPassword(password, salt = crypto.randomBytes(16)) {
 
 function verifyPassword(password, stored) {
   try {
-    const [scheme, saltHex, hashHex] = String(stored).split(":");
-    if (scheme !== "scrypt" || !saltHex || !hashHex) return false;
-    const actual = crypto.scryptSync(String(password), Buffer.from(saltHex, "hex"), 64);
-    const expected = Buffer.from(hashHex, "hex");
-    return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    const parts = String(stored).split(":");
+    if (parts[0] === "scrypt") {
+      const [, saltHex, hashHex] = parts;
+      if (!saltHex || !hashHex) return false;
+      const actual = crypto.scryptSync(String(password), Buffer.from(saltHex, "hex"), 64);
+      const expected = Buffer.from(hashHex, "hex");
+      return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+    }
+    // Backward compatibility for accounts created by the previous server.
+    const legacy = crypto.createHash("sha256").update(String(password)).digest("hex");
+    return legacy === String(stored);
   } catch { return false; }
 }
 
@@ -130,6 +136,9 @@ app.post("/api/login", (req, res) => {
   const password = String(req.body?.password ?? "");
   const user = db.prepare("SELECT id, username, password_hash FROM users WHERE username = ?").get(username);
   if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ error: "Benutzername oder Passwort falsch." });
+  if (!String(user.password_hash).startsWith("scrypt:")) {
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(hashPassword(password), user.id);
+  }
   res.json({ token: createSession(user.id), username: user.username });
 });
 
