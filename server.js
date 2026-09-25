@@ -167,7 +167,9 @@ app.post("/api/scores", requireUser, (req, res) => {
   return res.status(201).json({ saved: true });
 });
 
-app.get("/api/profile", requireUser, (req, res) => res.json(publicProfile(req.user.id)));
+function isAdminUser(user) { const configured = String(process.env.ADMIN_USERNAME || "").trim(); return Boolean(configured) && user.username.toLowerCase() === configured.toLowerCase(); }
+
+app.get("/api/profile", requireUser, (req, res) => res.json({ ...publicProfile(req.user.id), isAdmin: isAdminUser(req.user) }));
 
 app.put("/api/profile", requireUser, (req, res) => {
   const input = req.body || {};
