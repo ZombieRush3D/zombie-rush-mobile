@@ -56,7 +56,7 @@ input{width:min(300px,100%);padding:13px;margin:14px 0;border:1px solid #ffffff2
 #shopGrid{grid-template-columns:1fr}  
 #miniMap{bottom:150px;left:10px;width:90px;height:90px}  
 }  
-</style>  
+#mainMenu.screen{background:radial-gradient(ellipse at 78% 20%,#36572b99,transparent 42%),radial-gradient(ellipse at 20% 85%,#702d2580,transparent 38%),linear-gradient(125deg,#070b09f5,#0b110df7 55%,#141b10f5);backdrop-filter:blur(12px)}#mainMenu .card{width:min(1020px,96vw);padding:clamp(18px,4vw,40px);text-align:left;background:linear-gradient(145deg,#0d1712f5,#060a08f7);border-color:#91ff7130}.lobby-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.lobby-brand{font-size:12px;letter-spacing:3px;color:#bac9bd}.lobby-brand b{color:#6cf47c}.lobby-user,.lobby-stat,.lobby-card{border:1px solid #ffffff1c;border-radius:15px;background:#ffffff08;padding:14px}.lobby-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px}.lobby-hero{min-height:310px;padding:clamp(22px,4vw,40px);border:1px solid #b6ff8133;border-radius:19px;background:linear-gradient(105deg,#07100be8 12%,#09120baa 65%,#1a260e99),radial-gradient(ellipse at 78% 65%,#78aa4c55,transparent 55%),linear-gradient(135deg,#18251a,#27351b 55%,#101710)}.lobby-kicker{color:#70f583;font-size:11px;letter-spacing:3px;font-weight:900}.lobby-hero h2{font-size:clamp(34px,6vw,60px);line-height:.98;margin:12px 0}.lobby-hero p,.lobby-note{color:#a3b0a6;line-height:1.55}.lobby-actions,.lobby-nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.lobby-actions .primary{background:linear-gradient(120deg,#8cff72,#39bd61);color:#071109;border:0}.lobby-side{display:grid;grid-template-columns:1fr;gap:10px}.lobby-stat .label{font-size:10px}.lobby-stat strong{display:block;font-size:22px;margin-top:5px}.lobby-nav button{padding:10px 13px;background:#ffffff08;border-color:#ffffff1b}.lobby-nav button.active{border-color:#69f77d;color:#8aff93}.lobby-page h3{font-size:25px;margin:15px 0 6px}.lobby-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;margin:12px 0}.lobby-card{padding:15px}.lobby-card h4{margin:8px 0 5px}.lobby-card p{min-height:32px;color:#98a79b;font-size:12px;line-height:1.4}.lobby-card button{width:100%;padding:10px}.lobby-icon{font-size:26px}@media(max-width:700px){#mainMenu .card{max-height:96vh;padding:16px}.lobby-grid{grid-template-columns:1fr}.lobby-hero{min-height:270px}.lobby-side{grid-template-columns:repeat(2,1fr)}.lobby-stat{padding:11px}.lobby-stat strong{font-size:18px}}</style>  
 </head>  <body>  <canvas id="game"></canvas>
 
 <div id="hud">  
@@ -145,7 +145,7 @@ input{width:min(300px,100%);padding:13px;margin:14px 0;border:1px solid #ffffff2
     </div>
 
   </div>
-</section>  <section id="shopScreen" class="screen hidden">  
+</section>  <section id="mainMenu" class="screen hidden"><div class="card"><header class="lobby-top"><div class="lobby-brand">ZOMBIE<b>RUSH</b> · NIGHTFALL</div><div class="lobby-user">OPERATOR <b id="menuPlayerName">SURVIVOR</b></div></header><div id="lobbyPage"></div><nav class="lobby-nav"><button data-page="home">START</button><button data-page="loadout">ARSENAL</button><button data-page="shop">WAFFEN</button><button data-page="upgrades">UPGRADES</button><button data-page="crates">KISTEN</button><button data-page="scores">RANGLISTE</button><button data-page="logout">ABMELDEN</button></nav></div></section><section id="shopScreen" class="screen hidden">  
 <div class="card">  
 <h2>ARMORY</h2>  
 <p class="muted">Geld: <b id="shopMoney">$0</b></p>  
@@ -433,7 +433,7 @@ if(!result.target||!result.hit)continue;
 const zombie=result.target;  
 const headshot=result.hit.headshot;  
   
-let damage=weapon.damage*(headshot?2.5:1);  
+let damage=weapon.damage*(headshot?2.5:1)*(1+(metaProfile.upgrades.damage||0)*.12);  
   
 if(game.doubleDamage>0)damage*=2;  
   
@@ -616,7 +616,7 @@ moveZ=input.moveY;
 }  
   
 const length=Math.hypot(moveX,moveZ)||1;  
-const speed=keys.has("shift")||input.sprinting?8.5:5.5;  
+const speed=(keys.has("shift")||input.sprinting?8.5:5.5)*(1+(metaProfile.upgrades.mobility||0)*.08);  
   
 player.x+=moveX/length*speed*delta;  
 player.z+=moveZ/length*speed*delta;  
@@ -1980,5 +1980,35 @@ document
     "click",
     registerUser
   ); 
+</script><script>
+const META_KEY="zombieRushOperatorV2";
+const metaProfile={credits:800,weapons:[true,false,false,false,false,false,false,false,false],equipped:0,upgrades:{vitality:0,damage:0,mobility:0}};
+try{const s=JSON.parse(localStorage.getItem(META_KEY)||"null");if(s&&typeof s==="object")Object.assign(metaProfile,s);metaProfile.upgrades={vitality:0,damage:0,mobility:0,...(metaProfile.upgrades||{})};}catch{}
+weapons.push({name:"REVOLVER",damage:78,fireRate:.42,magazine:6,reserve:42,reload:1.25,price:950,spread:.018,pellets:1},{name:"BURST RIFLE",damage:34,fireRate:.11,magazine:27,reserve:135,reload:1.3,price:1350,spread:.035,pellets:1},{name:"PLASMA",damage:92,fireRate:.32,magazine:18,reserve:90,reload:1.45,price:2100,spread:.025,pellets:1});
+while(metaProfile.weapons.length<weapons.length)metaProfile.weapons.push(false);
+let metaTimer;
+function persistMeta(){localStorage.setItem(META_KEY,JSON.stringify(metaProfile));if(!authToken||!SERVER_URL||SERVER_URL==="DEINE-SERVER-ADRESSE")return;clearTimeout(metaTimer);metaTimer=setTimeout(()=>fetch(SERVER_URL+"/api/profile",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+authToken},body:JSON.stringify(metaProfile)}).catch(()=>{}),700);}
+async function fetchMeta(){if(!authToken||!SERVER_URL||SERVER_URL==="DEINE-SERVER-ADRESSE")return;try{const r=await fetch(SERVER_URL+"/api/profile",{headers:{Authorization:"Bearer "+authToken}});if(r.ok){const s=await r.json();Object.assign(metaProfile,s);metaProfile.upgrades={vitality:0,damage:0,mobility:0,...(s.upgrades||{})};while(metaProfile.weapons.length<weapons.length)metaProfile.weapons.push(false);}}catch{}}
+function applyMeta(){owned=weapons.map((_,i)=>Boolean(metaProfile.weapons[i]));owned[0]=true;game.money=Number(metaProfile.credits)||0;weaponIndex=metaProfile.weapons[metaProfile.equipped]?metaProfile.equipped:0;ammo=weapons[weaponIndex].magazine;reserveAmmo=weapons[weaponIndex].reserve;player.maxHealth=100+(metaProfile.upgrades.vitality||0)*20;player.health=player.maxHealth;}
+const baseReset=resetGame;resetGame=function(){baseReset();applyMeta();updateHud();};
+const baseHud=updateHud;updateHud=function(){baseHud();const c=Math.max(0,Math.floor(game.money));if(metaProfile.credits!==c||metaProfile.equipped!==weaponIndex){metaProfile.credits=c;metaProfile.equipped=weaponIndex;persistMeta();}};
+const baseEnd=endGame;endGame=function(){metaProfile.credits=Math.max(0,Math.floor(game.money));metaProfile.equipped=weaponIndex;persistMeta();baseEnd();};
+function openLobby(page="home"){game.running=false;["start","shopScreen","deathScreen"].forEach(id=>document.getElementById(id).classList.add("hidden"));document.getElementById("mainMenu").classList.remove("hidden");document.getElementById("menuPlayerName").textContent=loggedInUsername||"SURVIVOR";renderLobby(page);}
+function lobbyCard(icon,title,desc,attr,label){return '<article class="lobby-card"><div class="lobby-icon">'+icon+'</div><h4>'+title+'</h4><p>'+desc+'</p><button '+attr+'>'+label+'</button></article>';}
+function renderLobby(page="home"){
+document.querySelectorAll(".lobby-nav [data-page]").forEach(b=>b.classList.toggle("active",b.dataset.page===page));const root=document.getElementById("lobbyPage");
+if(page==="home"){root.innerHTML='<div class="lobby-grid"><section class="lobby-hero"><div class="lobby-kicker">NACHTWACHE · OPERATOR '+escapeHtml(loggedInUsername||"")+'</div><h2>Die Stadt gehört den Toten.</h2><p>Rüste dich aus, verbessere dein Überleben und halte so lange durch, wie du kannst.</p><div class="lobby-actions"><button class="primary" id="lobbyPlay">RUNDE STARTEN →</button><button id="lobbyLoadout">ARSENAL</button></div></section><aside class="lobby-side"><div class="lobby-stat"><span class="label">GUTHABEN</span><strong>◈ '+metaProfile.credits.toLocaleString("de-DE")+'</strong></div><div class="lobby-stat"><span class="label">AUSGERÜSTET</span><strong>'+weapons[metaProfile.equipped]?.name+'</strong></div><div class="lobby-stat"><span class="label">WAFFEN FREI</span><strong>'+metaProfile.weapons.filter(Boolean).length+' / '+weapons.length+'</strong></div></aside></div>';document.getElementById("lobbyPlay").onclick=startGame;document.getElementById("lobbyLoadout").onclick=()=>renderLobby("loadout");return;}
+if(page==="loadout"||page==="shop"){root.innerHTML='<h3>'+ (page==="shop"?"Waffenhändler":"Arsenal")+'</h3><p class="lobby-note">Guthaben ◈ '+metaProfile.credits.toLocaleString("de-DE")+' · Waffen dauerhaft freischalten.</p><div class="lobby-cards">'+weapons.map((w,i)=>lobbyCard("🔫",escapeHtml(w.name),w.damage+" Schaden · Magazin "+w.magazine,metaProfile.weapons[i]?'data-equip="'+i+'"':page==="shop"?'data-buy="'+i+'" disabled':'disabled',metaProfile.weapons[i]?(metaProfile.equipped===i?"AUSGERÜSTET":"AUSRÜSTEN"):page==="shop"?"KAUFEN · ◈ "+w.price:"GESPERRT")).join("")+'</div>';}
+if(page==="upgrades"){const data=[["vitality","🛡️","Feldpanzer","+20 maximale Gesundheit je Stufe",280],["damage","🎯","Kalibrierte Munition","+12 % Schaden je Stufe",420],["mobility","⚡","Leichte Ausrüstung","+8 % Lauftempo je Stufe",350]];root.innerHTML='<h3>Verbesserungen</h3><p class="lobby-note">Dauerhafte Upgrades · Guthaben ◈ '+metaProfile.credits.toLocaleString("de-DE")+'</p><div class="lobby-cards">'+data.map(([k,icon,name,desc,base])=>{const level=metaProfile.upgrades[k]||0;return lobbyCard(icon,name,"Stufe "+level+" · "+desc,'data-upgrade="'+k+'"',"VERBESSERN · ◈ "+base*(level+1));}).join("")+'</div>';}
+if(page==="crates"){root.innerHTML='<h3>Vorratskisten</h3><p class="lobby-note">Kisten schalten eine noch gesperrte Waffe frei. Bei doppelten Inhalten gibt es einen Teil des Preises zurück.</p><div class="lobby-cards">'+lobbyCard("📦","Feldkiste","Zufällige neue Waffe · 350 Münzen",'data-crate="350"',"ÖFFNEN · ◈ 350")+lobbyCard("🧰","Elite-Kiste","Bessere Chance auf starke Waffen · 800 Münzen",'data-crate="800"',"ÖFFNEN · ◈ 800")+'</div>';}
+if(page==="scores"){root.innerHTML='<h3>Rangliste</h3><p class="lobby-note">Deine Rekorde und die Online-Rangliste.</p><div id="lobbyScores"></div>';loadLeaderboard().then(()=>{const el=document.getElementById("lobbyScores");if(el)el.innerHTML=document.getElementById("leaders").innerHTML;});}
+root.querySelectorAll("[data-equip]").forEach(b=>b.onclick=()=>{metaProfile.equipped=Number(b.dataset.equip);applyMeta();persistMeta();renderLobby(page);});
+root.querySelectorAll("[data-buy]").forEach(b=>b.onclick=()=>{const i=Number(b.dataset.buy),w=weapons[i];if(metaProfile.credits<w.price){showToast("ZU WENIG GUTHABEN","Verdiene mehr in einer Runde");return;}metaProfile.credits-=w.price;metaProfile.weapons[i]=true;metaProfile.equipped=i;applyMeta();persistMeta();renderLobby(page);});
+root.querySelectorAll("[data-upgrade]").forEach(b=>b.onclick=()=>{const k=b.dataset.upgrade,base={vitality:280,damage:420,mobility:350}[k],cost=base*((metaProfile.upgrades[k]||0)+1);if(metaProfile.credits<cost){showToast("ZU WENIG GUTHABEN","Verdiene mehr in einer Runde");return;}metaProfile.credits-=cost;metaProfile.upgrades[k]++;persistMeta();renderLobby(page);});
+root.querySelectorAll("[data-crate]").forEach(b=>b.onclick=()=>{const cost=Number(b.dataset.crate);if(metaProfile.credits<cost){showToast("ZU WENIG GUTHABEN","Verdiene mehr in einer Runde");return;}metaProfile.credits-=cost;let pool=weapons.map((_,i)=>i).filter(i=>i>0&&!metaProfile.weapons[i]);if(cost>500)pool=pool.filter(i=>i>=3);if(pool.length){const i=pool[Math.floor(Math.random()*pool.length)];metaProfile.weapons[i]=true;metaProfile.equipped=i;showToast("WAFFE FREIGESCHALTET",weapons[i].name);}else{const refund=Math.floor(cost*.65);metaProfile.credits+=refund;showToast("DOPPELTES ITEM","◈ "+refund+" zurück");}applyMeta();persistMeta();renderLobby(page);});
+}
+document.getElementById("mainMenu").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(!b)return;if(b.dataset.page==="logout"){authToken=null;loggedInUsername=null;document.getElementById("mainMenu").classList.add("hidden");document.getElementById("start").classList.remove("hidden");document.getElementById("loginBox").classList.remove("hidden");document.getElementById("loginPassword").value="";}else renderLobby(b.dataset.page);});
+loginSuccess=async function(){document.getElementById("loginBox").classList.add("hidden");document.getElementById("loggedInBox").classList.add("hidden");await fetchMeta();applyMeta();openLobby("home");loadLeaderboard();};
+startGame=function(){resetGame();game.playerName=loggedInUsername||"SURVIVOR";document.getElementById("mainMenu").classList.add("hidden");document.getElementById("start").classList.add("hidden");document.getElementById("deathScreen").classList.add("hidden");document.getElementById("shopScreen").classList.add("hidden");game.running=true;startWave();};
 </script>  </body>  
 </html>
