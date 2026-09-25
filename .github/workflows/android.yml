@@ -17,13 +17,20 @@ jobs:
           node-version: '22'
 
       - name: Abhängigkeiten installieren
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Capacitor CLI prüfen
+        run: |
+          node --version
+          npm --version
+          test -x node_modules/.bin/cap
+          node_modules/.bin/cap --version
 
       - name: Android-Projekt erstellen
-        run: npx cap add android
+        run: node_modules/.bin/cap add android
 
       - name: Capacitor synchronisieren
-        run: npx cap sync android
+        run: node_modules/.bin/cap sync android
 
       - name: Java installieren
         uses: actions/setup-java@v4
