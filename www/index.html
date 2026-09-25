@@ -158,7 +158,7 @@ input{width:min(300px,100%);padding:13px;margin:14px 0;border:1px solid #ffffff2
 <p id="finalText" class="muted"></p>  
 <h2>HIGH SCORE</h2>  
 <div id="deathLeaders"></div>  
-<button id="restartButton">NOCHMAL SPIELEN</button>  
+<button id="restartButton">NOCHMAL SPIELEN</button> <button id="deathLobby">HAUPTMENÜ</button>  
 </div>  
 </section>  <div id="mobileControls">  
 <div id="moveStick" class="stick"><div class="knob"></div></div>  
@@ -2008,6 +2008,7 @@ root.querySelectorAll("[data-upgrade]").forEach(b=>b.onclick=()=>{const k=b.data
 root.querySelectorAll("[data-crate]").forEach(b=>b.onclick=()=>{const cost=Number(b.dataset.crate);if(metaProfile.credits<cost){showToast("ZU WENIG GUTHABEN","Verdiene mehr in einer Runde");return;}metaProfile.credits-=cost;let pool=weapons.map((_,i)=>i).filter(i=>i>0&&!metaProfile.weapons[i]);if(cost>500)pool=pool.filter(i=>i>=3);if(pool.length){const i=pool[Math.floor(Math.random()*pool.length)];metaProfile.weapons[i]=true;metaProfile.equipped=i;showToast("WAFFE FREIGESCHALTET",weapons[i].name);}else{const refund=Math.floor(cost*.65);metaProfile.credits+=refund;showToast("DOPPELTES ITEM","◈ "+refund+" zurück");}applyMeta();persistMeta();renderLobby(page);});
 }
 document.getElementById("mainMenu").addEventListener("click",e=>{const b=e.target.closest("[data-page]");if(!b)return;if(b.dataset.page==="logout"){authToken=null;loggedInUsername=null;document.getElementById("mainMenu").classList.add("hidden");document.getElementById("start").classList.remove("hidden");document.getElementById("loginBox").classList.remove("hidden");document.getElementById("loginPassword").value="";}else renderLobby(b.dataset.page);});
+document.getElementById("deathLobby").onclick=()=>openLobby("home");
 loginSuccess=async function(){document.getElementById("loginBox").classList.add("hidden");document.getElementById("loggedInBox").classList.add("hidden");await fetchMeta();applyMeta();openLobby("home");loadLeaderboard();};
 startGame=function(){resetGame();game.playerName=loggedInUsername||"SURVIVOR";document.getElementById("mainMenu").classList.add("hidden");document.getElementById("start").classList.add("hidden");document.getElementById("deathScreen").classList.add("hidden");document.getElementById("shopScreen").classList.add("hidden");game.running=true;startWave();};
 </script>  </body>  
