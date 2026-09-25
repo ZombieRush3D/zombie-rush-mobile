@@ -1752,7 +1752,7 @@ draw();
 requestAnimationFrame(loop);  
 }  
   
-requestAnimationFrame(loop); const SERVER_URL = "DEINE-SERVER-ADRESSE";
+requestAnimationFrame(loop); const SERVER_URL = window.ZOMBIE_RUSH_API_URL || ((location.protocol==="http:"||location.protocol==="https:") ? location.origin : "");
 
 let authToken = null;
 let loggedInUsername = null;
