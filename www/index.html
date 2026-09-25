@@ -1,15 +1,11 @@
 <!DOCTYPE html>  <html lang="de">  
 <head>  
 <meta charset="UTF-8">  
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">  
 <title>Zombie Rush 3D</title>  
 <style>  
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}  
-html,body{touch-action: none;
-overscroll-behavior: none;
--webkit-user-select: none;
-user-select: none;
--webkit-touch-callout: none;margin:0;width:100%;height:100%;overflow:hidden;background:#030604;color:#fff;font-family:Arial,sans-serif;touch-action:none}  
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#030604;color:#fff;font-family:Arial,sans-serif;touch-action:none}  
 canvas{position:fixed;inset:0;width:100%;height:100%}  
 .hidden{display:none!important}  
 .screen{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;background:radial-gradient(circle,#142219,#020302 75%)}  
@@ -87,17 +83,68 @@ input{width:min(300px,100%);padding:13px;margin:14px 0;border:1px solid #ffffff2
 <div id="toastText"></div>  
 </div>  <canvas id="miniMap" width="220" height="220"></canvas>
 
-<section id="start" class="screen">  
-<div class="card">  
-<h1>ZOMBIE<span>RUSH</span></h1>  
-<p class="muted">3D NIGHT SURVIVAL</p>  
-<input id="playerName" maxlength="16" placeholder="Dein Name">  
-<p class="muted">PC: WASD · Maus · Linksklick · R · 1–6</p>  
-<p class="muted">Handy: linker Stick = laufen · rechter Stick = drehen</p>  
-<button id="startButton">SPIEL STARTEN</button>  
-<h2>HIGH SCORE</h2>  
-<div id="leaders"></div>  
-</div>  
+<section id="start" class="screen">
+  <div class="card">
+
+    <h1>ZOMBIE<span>RUSH</span></h1>
+    <p class="muted">3D NIGHT SURVIVAL</p>
+
+    <div id="loginBox">
+
+      <h2>LOGIN</h2>
+
+      <input
+        id="loginName"
+        maxlength="16"
+        placeholder="Spielername"
+        autocomplete="username"
+      >
+
+      <input
+        id="loginPassword"
+        type="password"
+        placeholder="Passwort"
+        autocomplete="current-password"
+      >
+
+      <br>
+
+      <button id="loginButton">
+        EINLOGGEN
+      </button>
+
+      <button id="registerButton">
+        REGISTRIEREN
+      </button>
+
+      <p id="loginMessage" class="muted"></p>
+
+    </div>
+
+    <div id="loggedInBox" class="hidden">
+
+      <h2>WILLKOMMEN</h2>
+
+      <p>
+        Spieler:
+        <b id="loggedInName"></b>
+      </p>
+
+      <button id="startButton">
+        SPIEL STARTEN
+      </button>
+
+    </div>
+
+    <h2>ONLINE HIGH SCORE</h2>
+
+    <div id="leaders">
+      <p class="muted">
+        Lade Rangliste...
+      </p>
+    </div>
+
+  </div>
 </section>  <section id="shopScreen" class="screen hidden">  
 <div class="card">  
 <h2>ARMORY</h2>  
@@ -1308,12 +1355,8 @@ reloadTimer=0;
 updateHud();  
 }  
   
-function startGame(){  
-const inputName=  
-document.getElementById(  
-"playerName"  
-).value.trim();  
-  
+function startGame(){
+const inputName=loggedInUsername || document.getElementById("loginName").value.trim();
 game.playerName=  
 inputName.slice(0,16)||  
 "Player";  
@@ -1337,10 +1380,10 @@ game.running=true;
 startWave();  
 }  
   
-function endGame(){  
-game.running=false;  
-  
-saveScore();  
+function endGame(){
+game.running=false;
+saveScore();
+uploadScore();  
   
 document.getElementById(  
 "finalText"  
@@ -1705,6 +1748,235 @@ draw();
 requestAnimationFrame(loop);  
 }  
   
-requestAnimationFrame(loop);  
+requestAnimationFrame(loop); const SERVER_URL = window.ZOMBIE_RUSH_API_URL || "";
+
+let authToken = localStorage.getItem("zombieRushAuthToken");
+let loggedInUsername = localStorage.getItem("zombieRushUsername");
+
+async function registerUser() {
+  const username =
+    document.getElementById("loginName").value.trim();
+
+  const password =
+    document.getElementById("loginPassword").value;
+
+  const message =
+    document.getElementById("loginMessage");
+
+  if (!username || !password) {
+    message.textContent =
+      "Bitte Name und Passwort eingeben.";
+
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      SERVER_URL + "/api/register",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Registrierung fehlgeschlagen.";
+
+      return;
+    }
+
+    authToken = data.token;
+    loggedInUsername = data.username;
+    localStorage.setItem("zombieRushAuthToken", authToken);
+    localStorage.setItem("zombieRushUsername", loggedInUsername);
+    loginSuccess();
+
+  } catch (error) {
+
+    message.textContent =
+      "Server nicht erreichbar.";
+  }
+}
+
+async function loginUser() {
+  const username =
+    document.getElementById("loginName").value.trim();
+
+  const password =
+    document.getElementById("loginPassword").value;
+
+  const message =
+    document.getElementById("loginMessage");
+
+  if (!username || !password) {
+    message.textContent =
+      "Bitte Name und Passwort eingeben.";
+
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      SERVER_URL + "/api/login",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      message.textContent =
+        data.error || "Login fehlgeschlagen.";
+
+      return;
+    }
+
+    authToken = data.token;
+    loggedInUsername = data.username;
+    localStorage.setItem("zombieRushAuthToken", authToken);
+    localStorage.setItem("zombieRushUsername", loggedInUsername);
+    loginSuccess();
+
+  } catch (error) {
+
+    message.textContent =
+      "Server nicht erreichbar.";
+  }
+}
+
+function loginSuccess() {
+
+  document
+    .getElementById("loginBox")
+    .classList.add("hidden");
+
+  document
+    .getElementById("loggedInBox")
+    .classList.remove("hidden");
+
+  document
+    .getElementById("loggedInName")
+    .textContent = loggedInUsername;
+
+  loadLeaderboard();
+}
+
+async function loadLeaderboard() {
+
+  const element =
+    document.getElementById("leaders");
+
+  try {
+
+    const response =
+      await fetch(
+        SERVER_URL + "/api/leaderboard"
+      );
+
+    const scores =
+      await response.json();
+
+    if (!scores.length) {
+
+      element.innerHTML =
+        '<p class="muted">Noch keine Scores.</p>';
+
+      return;
+    }
+
+    element.innerHTML =
+      scores.map((entry, index) => {
+
+        return `
+          <div class="leader">
+            <b>#${index + 1}</b>
+
+            <span>
+              ${escapeHtml(entry.username)}
+            </span>
+
+            <strong>
+              ${Number(entry.score)
+                .toLocaleString("de-DE")}
+            </strong>
+          </div>
+        `;
+
+      }).join("");
+
+  } catch {
+
+    element.innerHTML =
+      '<p class="muted">Rangliste nicht erreichbar.</p>';
+  }
+}
+
+async function uploadScore() {
+
+  if (!authToken) return;
+
+  try {
+
+    await fetch(
+      SERVER_URL + "/api/scores",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization":
+            "Bearer " + authToken
+        },
+
+        body: JSON.stringify({
+          score: game.score,
+          wave: game.wave,
+          level: player.level
+        })
+      }
+    );
+
+    loadLeaderboard();
+
+  } catch (error) {
+
+    console.log(
+      "Score konnte nicht gespeichert werden.",
+      error
+    );
+  }
+}
+
+document
+  .getElementById("loginButton")
+  .addEventListener(
+    "click",
+    loginUser
+  );
+
+document
+  .getElementById("registerButton")
+  .addEventListener(
+    "click",
+    registerUser
+  ); 
 </script>  </body>  
 </html>
