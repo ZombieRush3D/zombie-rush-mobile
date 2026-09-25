@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS scores (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS idx_scores_leaderboard ON scores(score DESC, wave DESC, level DESC, id ASC);
+CREATE INDEX IF NOT EXISTS idx_scores_user ON scores(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
 `);
 
@@ -50,9 +50,7 @@ const MAX_LEVEL = 10000;
 const SCORE_COOLDOWN_MS = 1500;
 const lastScoreAt = new Map();
 
-function normalizeUsername(value) {
-  return String(value ?? "").trim();
-}
+function normalizeUsername(value) { return String(value ?? "").trim(); }
 
 function hashPassword(password, salt = crypto.randomBytes(16)) {
   const derived = crypto.scryptSync(String(password), salt, 64);
@@ -66,24 +64,16 @@ function verifyPassword(password, stored) {
     const actual = crypto.scryptSync(String(password), Buffer.from(saltHex, "hex"), 64);
     const expected = Buffer.from(hashHex, "hex");
     return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
-function createToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
-
-function tokenHash(token) {
-  return crypto.createHash("sha256").update(token).digest("hex");
-}
+function createToken() { return crypto.randomBytes(32).toString("hex"); }
+function tokenHash(token) { return crypto.createHash("sha256").update(token).digest("hex"); }
 
 function createSession(userId) {
   const token = createToken();
-  db.prepare(`INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)`).run(
-    tokenHash(token), userId, Date.now() + SESSION_TTL_MS
-  );
+  db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
+    .run(tokenHash(token), userId, Date.now() + SESSION_TTL_MS);
   return token;
 }
 
@@ -92,15 +82,12 @@ function getUserFromRequest(req) {
   if (!header.startsWith("Bearer ")) return null;
   const token = header.slice(7).trim();
   if (!token) return null;
-
   const row = db.prepare(`
     SELECT u.id, u.username, s.token_hash
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ? AND s.expires_at > ?
   `).get(tokenHash(token), Date.now());
-
-  if (!row) return null;
-  return { id: row.id, username: row.username, tokenHash: row.token_hash };
+  return row ? { id: row.id, username: row.username, tokenHash: row.token_hash } : null;
 }
 
 function auth(req, res, next) {
@@ -116,39 +103,23 @@ function validateGameStats(score, wave, level) {
     && Number.isSafeInteger(level) && level >= 1 && level <= MAX_LEVEL;
 }
 
-function cleanExpiredSessions() {
-  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
-}
-
-app.get("/", (req, res) => {
-  res.json({ game: "Zombie Rush 3D", online: true, api: 1 });
-});
-
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, game: "Zombie Rush 3D", time: new Date().toISOString() });
-});
+app.get("/", (req, res) => res.json({ game: "Zombie Rush 3D", online: true, api: 1 }));
+app.get("/api/health", (req, res) => res.json({ ok: true, game: "Zombie Rush 3D", time: new Date().toISOString() }));
 
 app.post("/api/register", (req, res) => {
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password ?? "");
-
   if (!/^[A-Za-z0-9_]{3,16}$/.test(username)) {
     return res.status(400).json({ error: "Der Name muss 3 bis 16 Zeichen haben und darf nur Buchstaben, Zahlen und _ enthalten." });
   }
   if (password.length < 6 || password.length > 128) {
     return res.status(400).json({ error: "Das Passwort muss 6 bis 128 Zeichen haben." });
   }
-
   try {
-    const result = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)").run(
-      username, hashPassword(password)
-    );
-    const token = createSession(result.lastInsertRowid);
-    res.status(201).json({ token, username });
+    const result = db.prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)").run(username, hashPassword(password));
+    res.status(201).json({ token: createSession(result.lastInsertRowid), username });
   } catch (error) {
-    if (String(error.message).includes("UNIQUE")) {
-      return res.status(409).json({ error: "Dieser Name ist bereits vergeben." });
-    }
+    if (String(error.message).includes("UNIQUE")) return res.status(409).json({ error: "Dieser Name ist bereits vergeben." });
     console.error(error);
     res.status(500).json({ error: "Registrierung fehlgeschlagen." });
   }
@@ -158,13 +129,8 @@ app.post("/api/login", (req, res) => {
   const username = normalizeUsername(req.body?.username);
   const password = String(req.body?.password ?? "");
   const user = db.prepare("SELECT id, username, password_hash FROM users WHERE username = ?").get(username);
-
-  if (!user || !verifyPassword(password, user.password_hash)) {
-    return res.status(401).json({ error: "Benutzername oder Passwort falsch." });
-  }
-
-  const token = createSession(user.id);
-  res.json({ token, username: user.username });
+  if (!user || !verifyPassword(password, user.password_hash)) return res.status(401).json({ error: "Benutzername oder Passwort falsch." });
+  res.json({ token: createSession(user.id), username: user.username });
 });
 
 app.post("/api/logout", auth, (req, res) => {
@@ -172,64 +138,35 @@ app.post("/api/logout", auth, (req, res) => {
   res.json({ ok: true });
 });
 
-app.get("/api/me", auth, (req, res) => {
-  res.json({ id: req.user.id, username: req.user.username });
-});
+app.get("/api/me", auth, (req, res) => res.json({ id: req.user.id, username: req.user.username }));
 
 app.get("/api/leaderboard", (req, res) => {
-  cleanExpiredSessions();
+  db.prepare("DELETE FROM sessions WHERE expires_at <= ?").run(Date.now());
   const limit = Math.min(Math.max(Number.parseInt(req.query.limit || "100", 10) || 100, 1), 100);
   const rows = db.prepare(`
-    SELECT u.username, MAX(s.score) AS score,
-           MAX(s.wave) KEEP_WAVE, MAX(s.level) KEEP_LEVEL,
-           MAX(s.created_at) created_at
-    FROM scores s JOIN users u ON u.id = s.user_id
-    GROUP BY s.user_id
-    ORDER BY score DESC
-    LIMIT ?
-  `).all(limit);
-
-  // SQLite has no KEEP clause; the query above is intentionally replaced below
-  // with a portable per-user best-score selection.
-  const bestRows = db.prepare(`
     SELECT s.user_id, u.username, s.score, s.wave, s.level, s.created_at
     FROM scores s JOIN users u ON u.id = s.user_id
     WHERE NOT EXISTS (
       SELECT 1 FROM scores s2
       WHERE s2.user_id = s.user_id
-        AND (s2.score > s.score OR (s2.score = s.score AND s2.wave > s.wave)
-          OR (s2.score = s.score AND s2.wave = s.wave AND s2.level > s.level)
-          OR (s2.score = s.score AND s2.wave = s.wave AND s2.level = s.level AND s2.id < s.id))
+      AND (s2.score > s.score OR
+        (s2.score = s.score AND s2.wave > s.wave) OR
+        (s2.score = s.score AND s2.wave = s.wave AND s2.level > s.level) OR
+        (s2.score = s.score AND s2.wave = s.wave AND s2.level = s.level AND s2.id < s.id))
     )
     ORDER BY s.score DESC, s.wave DESC, s.level DESC, s.id ASC
     LIMIT ?
   `).all(limit).map((row, index) => ({
-    rank: index + 1,
-    username: row.username,
-    score: Number(row.score),
-    wave: Number(row.wave),
-    level: Number(row.level),
-    createdAt: row.created_at
+    rank: index + 1, username: row.username, score: Number(row.score),
+    wave: Number(row.wave), level: Number(row.level), createdAt: row.created_at
   }));
-
-  void rows;
-  res.json(bestRows);
+  res.json(rows);
 });
 
 app.get("/api/leaderboard/me", auth, (req, res) => {
-  const best = db.prepare(`
-    SELECT score FROM scores WHERE user_id = ?
-    ORDER BY score DESC, wave DESC, level DESC, id ASC LIMIT 1
-  `).get(req.user.id);
-
+  const best = db.prepare(`SELECT score FROM scores WHERE user_id = ? ORDER BY score DESC, wave DESC, level DESC, id ASC LIMIT 1`).get(req.user.id);
   if (!best) return res.json({ rank: null, bestScore: 0, username: req.user.username });
-
-  const better = db.prepare(`
-    SELECT COUNT(*) AS count FROM (
-      SELECT user_id, MAX(score) AS best_score FROM scores GROUP BY user_id
-    ) WHERE best_score > ?
-  `).get(best.score);
-
+  const better = db.prepare(`SELECT COUNT(*) AS count FROM (SELECT user_id, MAX(score) AS best_score FROM scores GROUP BY user_id) WHERE best_score > ?`).get(best.score);
   res.json({ rank: Number(better.count) + 1, bestScore: Number(best.score), username: req.user.username });
 });
 
@@ -237,39 +174,17 @@ app.post("/api/scores", auth, (req, res) => {
   const score = Number(req.body?.score);
   const wave = Number(req.body?.wave);
   const level = Number(req.body?.level);
-
-  if (!validateGameStats(score, wave, level)) {
-    return res.status(400).json({ error: "Ungültige Spielwerte." });
-  }
-
+  if (!validateGameStats(score, wave, level)) return res.status(400).json({ error: "Ungültige Spielwerte." });
   const previous = lastScoreAt.get(req.user.id) || 0;
-  if (Date.now() - previous < SCORE_COOLDOWN_MS) {
-    return res.status(429).json({ error: "Bitte kurz warten." });
-  }
+  if (Date.now() - previous < SCORE_COOLDOWN_MS) return res.status(429).json({ error: "Bitte kurz warten." });
   lastScoreAt.set(req.user.id, Date.now());
-
-  if (score > (wave * 250000) + (level * 50000)) {
-    return res.status(400).json({ error: "Score ist für Wave/Level nicht plausibel." });
-  }
-
-  const result = db.prepare(`
-    INSERT INTO scores (user_id, score, wave, level) VALUES (?, ?, ?, ?)
-  `).run(req.user.id, score, wave, level);
-
+  if (score > (wave * 250000) + (level * 50000)) return res.status(400).json({ error: "Score ist für Wave/Level nicht plausibel." });
+  const result = db.prepare("INSERT INTO scores (user_id, score, wave, level) VALUES (?, ?, ?, ?)").run(req.user.id, score, wave, level);
   res.status(201).json({ ok: true, id: result.lastInsertRowid });
 });
 
 app.use(express.static(__dirname));
-
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Zombie Rush server listening on port ${PORT}`);
-});
-
-function shutdown() {
-  server.close(() => {
-    db.close();
-    process.exit(0);
-  });
-}
+const server = app.listen(PORT, "0.0.0.0", () => console.log(`Zombie Rush server listening on port ${PORT}`));
+function shutdown() { server.close(() => { db.close(); process.exit(0); }); }
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
