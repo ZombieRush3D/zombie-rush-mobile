@@ -625,7 +625,7 @@ player.x=Math.max(-44,Math.min(44,player.x));
 player.z=Math.max(-44,Math.min(44,player.z));  
   
 if(Math.abs(input.aimX)>.05){  
-player.angle+=input.aimX*.055;  
+player.angle+=input.aimX*.055*delta*60;  
 }  
   
 for(const zombie of zombies){  
@@ -1990,8 +1990,8 @@ let metaTimer;
 function persistMeta(){localStorage.setItem(META_KEY,JSON.stringify(metaProfile));if(!authToken||!SERVER_URL||SERVER_URL==="DEINE-SERVER-ADRESSE")return;clearTimeout(metaTimer);metaTimer=setTimeout(()=>fetch(SERVER_URL+"/api/profile",{method:"PUT",headers:{"Content-Type":"application/json","Authorization":"Bearer "+authToken},body:JSON.stringify(metaProfile)}).catch(()=>{}),700);}
 async function fetchMeta(){if(!authToken||!SERVER_URL||SERVER_URL==="DEINE-SERVER-ADRESSE")return;try{const r=await fetch(SERVER_URL+"/api/profile",{headers:{Authorization:"Bearer "+authToken}});if(r.ok){const s=await r.json();Object.assign(metaProfile,s);metaProfile.upgrades={vitality:0,damage:0,mobility:0,...(s.upgrades||{})};while(metaProfile.weapons.length<weapons.length)metaProfile.weapons.push(false);}}catch{}}
 function applyMeta(){owned=weapons.map((_,i)=>Boolean(metaProfile.weapons[i]));owned[0]=true;game.money=Number(metaProfile.credits)||0;weaponIndex=metaProfile.weapons[metaProfile.equipped]?metaProfile.equipped:0;ammo=weapons[weaponIndex].magazine;reserveAmmo=weapons[weaponIndex].reserve;player.maxHealth=100+(metaProfile.upgrades.vitality||0)*20;player.health=player.maxHealth;}
-const baseReset=resetGame;resetGame=function(){baseReset();applyMeta();updateHud();};
-const baseHud=updateHud;updateHud=function(){baseHud();const c=Math.max(0,Math.floor(game.money));if(metaProfile.credits!==c||metaProfile.equipped!==weaponIndex){metaProfile.credits=c;metaProfile.equipped=weaponIndex;persistMeta();}};
+let resettingRun=false;const baseReset=resetGame;resetGame=function(){resettingRun=true;baseReset();resettingRun=false;applyMeta();updateHud();};
+const baseHud=updateHud;updateHud=function(){baseHud();if(resettingRun)return;const c=Math.max(0,Math.floor(game.money));if(metaProfile.credits!==c||metaProfile.equipped!==weaponIndex){metaProfile.credits=c;metaProfile.equipped=weaponIndex;persistMeta();}};
 const baseEnd=endGame;endGame=function(){metaProfile.credits=Math.max(0,Math.floor(game.money));metaProfile.equipped=weaponIndex;persistMeta();baseEnd();};
 function openLobby(page="home"){game.running=false;["start","shopScreen","deathScreen"].forEach(id=>document.getElementById(id).classList.add("hidden"));document.getElementById("mainMenu").classList.remove("hidden");document.getElementById("menuPlayerName").textContent=loggedInUsername||"SURVIVOR";renderLobby(page);}
 function lobbyCard(icon,title,desc,attr,label){return '<article class="lobby-card"><div class="lobby-icon">'+icon+'</div><h4>'+title+'</h4><p>'+desc+'</p><button '+attr+'>'+label+'</button></article>';}
