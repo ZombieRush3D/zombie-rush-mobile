@@ -40,10 +40,21 @@ jobs:
 
       - name: Play-Store AAB bauen
         working-directory: android
-        run: chmod +x gradlew && ./gradlew bundleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleDebug
 
-      - name: AAB speichern
+      - name: AAB prüfen
+        run: |
+          echo "Gefundene AAB-Dateien:"
+          find android/app/build/outputs -type f -name '*.aab' -print
+          test -f android/app/build/outputs/bundle/debug/app-debug.aab
+          ls -lh android/app/build/outputs/bundle/debug/app-debug.aab
+
+      - name: AAB als GitHub-Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: Zombie-Rush-3D-Play-Store
+          name: Zombie-Rush-3D-Play-Store-AAB
           path: android/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+          retention-days: 14
