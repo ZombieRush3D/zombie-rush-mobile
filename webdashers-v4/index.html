@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Web Dashers Complete v4</title>
+<base href="https://web-dashers.github.io/">
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="assets/style.css">
+<meta name="description" content="Web Dashers Complete v4">
+<meta name="theme-color" content="#C1FB3D">
+<script src="assets/scripts/game/allObjects.js?latest"></script>
+<script src="assets/scripts/game/allLevels.js"></script>
+<script src="assets/scripts/libs/phaser.min.js"></script>
+<script src="assets/scripts/libs/pako.min.js"></script>
+<script src="assets/scripts/utils/cache-manager.js"></script>
+<script src="assets/scripts/api/GDapiWrapper.js"></script>
+<script src="assets/scripts/utils/api-config.js"></script>
+<script src="assets/scripts/api/account-api.js"></script>
+<script>
+(function(){
+  var HOSTS=["https://gd-proxy.webdashers.workers.dev","https://webdashers.webdashersdevelopement.workers.dev/","https://fallbackgdproxy.webdashers.workers.dev","https://fallback2.webdashers.workers.dev"];
+  window._gdProxyUrl=HOSTS[0]; window._gdProxyHosts=HOSTS; var active=0, nativeFetch=window.fetch.bind(window);
+  function matching(url){for(var i=0;i<HOSTS.length;i++) if(url.indexOf(HOSTS[i])===0) return HOSTS[i]; return null;}
+  function swap(url,a,b){return b+url.slice(a.length);}
+  window.fetch=function(input,init){
+    var isReq=typeof Request!=="undefined"&&input instanceof Request, url=isReq?input.url:input;
+    if(typeof url!=="string") return nativeFetch(input,init);
+    var old=matching(url); if(!old) return nativeFetch(input,init);
+    var tries=0;
+    function go(i){var host=HOSTS[i], u=swap(url,old,host), inp=isReq?new Request(u,input):u;
+      return nativeFetch(inp,init).then(function(r){if((r.status===429||r.status===503)&&tries<HOSTS.length-1){tries++;return go((i+1)%HOSTS.length);}active=i;window._gdProxyUrl=host;return r;},function(e){if(tries<HOSTS.length-1){tries++;return go((i+1)%HOSTS.length);}throw e;});}
+    return go(active);
+  };
+})();
+</script>
+<script defer src="assets/scripts/utils/config.js"></script>
+<script defer src="assets/scripts/core/triggers.js"></script>
+<script defer src="assets/scripts/core/level.js?latest"></script>
+<script defer src="assets/scripts/core/player.js?latest"></script>
+<script defer src="assets/scripts/core/audio.js"></script>
+<script defer src="assets/scripts/core/loading-screen.js"></script>
+<script defer src="assets/scripts/core/level-editor.js?latest"></script>
+<script defer src="assets/scripts/core/game-scene.js?latest"></script>
+<script defer src="assets/scripts/core/main.js"></script>
+<script src="wd-complete-patch.js"></script>
+<script>
+window.addEventListener('error',function(e){console.warn('[WD Complete]',e.message||e.error);});
+if(window.ResizeObserver){new ResizeObserver(function(){window.dispatchEvent(new Event('resize'));}).observe(document.documentElement);}
+document.oncontextmenu=function(e){e.preventDefault();};
+</script>
+</head>
+<body></body>
+</html>
